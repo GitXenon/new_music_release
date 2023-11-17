@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Music Album Release Newsletter</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333333;
+            margin-bottom: 5px;
+        }
+
+        .header p {
+            color: #666666;
+            margin-bottom: 10px;
+        }
+
+        .album {
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+
+        .album img {
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+
+        .album h2 a {
+            color: #333333;
+            text-decoration: none;
+        }
+
+        .album h2, .album h3, .album p, .genre {
+            margin: 5px 0;
+        }
+
+        .genre {
+            font-style: italic;
+            color: #888888;
+        }
+
+        @media (min-width: 768px) {}
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Music Album Release Newsletter</h1>
+        <p>Discover the latest music releases and stay tuned!</p>
+    </div>
+
+    <div class="albums">
+        {{range .}}
+        <div class="album">
+            <img src="{{.AlbumArt}}" alt="{{.AlbumName}} Cover">
+            <h2><a href="{{.TidalURL}}" target="_blank">{{.AlbumName}}</a></h2>
+            <h3>{{.ArtistName}}</h3>
+            <p class="genre">Genre: {{.Genre}}</p>
+        </div>
+        {{end}}
+    </div>
+</div>
+
+</body>
+</html>
