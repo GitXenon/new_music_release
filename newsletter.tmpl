@@ -5,63 +5,116 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Album Release Newsletter</title>
     <style>
-        body {
-            font-family: 'Arial', sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 0;
-        }
+    /* Set default colors for light mode */
+    :root {
+        --background-color: white;
+        --foreground-color: #fff;
+        --text-color: #1F2328;
+        --text-color-muted: #656d76;
+        --text-color-subtle: #6e7781;
+        --accent-color: #0969da;
+        --border-color: #d0d7de;
+    }
 
-        .container {
-            max-width: 800px;
-            margin: 20px auto;
-            background-color: #ffffff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    /* Dark mode */
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --background-color: #0d1117;
+            --foreground-color: #e6edf3;
+            --text-color: #e6edf3;
+            --text-color-muted: #7d8590;
+            --text-color-subtle: #6e7681;
+            --accent-color: #4e9fff;
+            --border-color: #30363d;
         }
+    }
 
-        .header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: var(--background-color);
+        color: var(--text-color);
+    }
 
-        .header h1 {
-            color: #333333;
-            margin-bottom: 5px;
-        }
+    .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: var(--background-color);
+    }
 
-        .header p {
-            color: #666666;
-            margin-bottom: 10px;
-        }
+    .header {
+        text-align: center;
+        margin-bottom: 20px;
+    }
 
-        .album {
-            box-sizing: border-box;
-            margin-bottom: 20px;
-        }
+    .header h1 {
+        color: var(--text-color);
+    }
 
-        .album img {
-            object-fit: cover;
-            border-radius: 8px;
-            margin-bottom: 10px;
-        }
+    a {
+        text-decoration: none;
+    }
 
-        .album h2 a {
-            color: #333333;
-            text-decoration: none;
-        }
+    .artist-info {
+        display: flex;
+        align-items: center;
+    }
 
-        .album h2, .album h3, .album p, .genre {
-            margin: 5px 0;
-        }
+    .artist-name {
+        font-weight: bold;
+        margin-right: 1em;
+    }
 
-        .genre {
-            font-style: italic;
-            color: #888888;
-        }
+    /* Style the popularity */
+    .popularity {
+        font-size: 12px;
+        padding: 0px 7px;
+        background-color: #f6f8fa;
+        border: 1px solid #d0d7de;
+        border-radius: 2em;
+    }
 
-        @media (min-width: 768px) {}
+    /* Add "hot" class for popularity higher than 80 */
+    .popularity.hot {
+        background-color: #fff1e5; /* Darker orange for hot */
+        border-color: rgba(251,143,68,0.4);
+    }
+
+    .albums {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 20px;
+    }
+
+    .album {
+        background-color: var(--foreground-color);
+        padding: 15px;
+        border-radius: 6px;
+        box-shadow: 0 1px 3px rgb(27, 31, 35, 0.12), 0 0 2px rgba(27, 31, 35, 0.16);
+        border: 1px solid var(--border-color);
+    }
+
+    .album img {
+        max-width: 100%;
+        border-radius: 4px;
+    }
+
+    .album h2 {
+        margin-top: 10px;
+        font-size: 1em;
+        color: var(--accent-color);
+    }
+
+    .album h3 {
+        margin: 5px 0;
+        font-size: 1em;
+    }
+
+    .album p.genre {
+        color: var(--text-color-muted);
+    }
     </style>
 </head>
 <body>
@@ -77,12 +130,21 @@
         <div class="album">
             <img src="{{.AlbumArt}}" alt="{{.AlbumName}} Cover">
             <h2><a href="{{.TidalURL}}" target="_blank">{{.AlbumName}}</a></h2>
-            <h3>{{.ArtistName}}</h3>
+            <div class="artist-info">
+               <div class="artist-name">{{.ArtistName}}</div>
+               <div class="popularity {{if (ge .ArtistPopularity 80)}}hot{{end}}">{{.ArtistPopularity}}</div>
+            </div>
             <p class="genre">Genre: {{.Genre}}</p>
         </div>
         {{end}}
     </div>
 </div>
-
+<script>
+    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+</script>
 </body>
 </html>
