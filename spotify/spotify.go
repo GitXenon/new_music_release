@@ -116,18 +116,25 @@ func RequestAccessTokenSpotify() error {
 }
 
 func RefreshTokenSpotify() error {
+	clientID := viper.GetString("spotify.client_id")
+	clientSecret := viper.GetString("spotify.client_secret")
 	refreshToken := viper.GetString("spotify.refresh_token")
 
 	// Build the request
 	url := "https://accounts.spotify.com/api/token"
-	payload := strings.NewReader("grant_type=refresh_token&refresh_token=" + refreshToken)
-
-	req, err := http.NewRequest("POST", url, payload)
+	req, err := http.NewRequest("POST", url, nil)
 	if err != nil {
 		return err
 	}
 
+	b64Creds := base64.StdEncoding.EncodeToString([]byte(clientID + ":" + clientSecret))
+	req.Header.Set("Authorization", "Basic "+b64Creds)
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+
+	q := req.URL.Query()
+	q.Add("grant_type", "refresh_token")
+	q.Add("refresh_token", refreshToken)
+	req.URL.RawQuery = q.Encode()
 
 	// Perform the HTTP request
 	client := &http.Client{}
