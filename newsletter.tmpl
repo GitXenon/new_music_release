@@ -140,16 +140,20 @@
             <img src="{{.AlbumArt}}" alt="{{.AlbumName}} Cover">
             <div class="album-name">{{.AlbumName}}</div>
             <div class="streaming-platform">
+            {{if .GetTidalURL}}
                 <div class="spotify">
                     <a href="{{.GetTidalURL}}" target="_blank">
                         <img src="https://tidal.com/apple-touch-icon.png" alt="tidal logo">
                     </a>
                 </div>
+            {{end}}
+            {{if .GetSpotifyURL}}
                 <div class="tidal">
                     <a href="{{.GetSpotifyURL}}" target="_blank">
                         <img src="https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png" alt="spotify logo">
                     </a>
                 </div>
+            {{end}}
             </div>
             <div class="artist-info">
                <div class="artist-name">{{.ArtistName}}</div>
