@@ -8,7 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"newmusicrelease/aggregator"
+	"newmusicrelease/album"
 	"strings"
 	"time"
 
@@ -16,34 +16,12 @@ import (
 	"github.com/spf13/viper"
 )
 
-type Artist struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Main bool   `json:"main"`
-}
-
-type ImageCover struct {
-	URL    string `json:"url"`
-	Width  int    `json:"width"`
-	Height int    `json:"height"`
-}
-
-type Resource struct {
-	ID          string       `json:"id"`
-	BarcodeID   string       `json:"barcodeId"`
-	Title       string       `json:"title"`
-	Artists     []Artist     `json:"artists"`
-	Duration    int          `json:"duration"`
-	ReleaseDate string       `json:"releaseDate"`
-	ImageCover  []ImageCover `json:"imageCover"`
-}
-
-type Response struct {
+type SearchResponse struct {
 	Albums []struct {
-		Resource Resource `json:"resource"`
-		ID       string   `json:"id"`
-		Status   int      `json:"status"`
-		Message  string   `json:"message"`
+		TidalAlbum album.TidalAlbum `json:"resource"`
+		ID         string           `json:"id"`
+		Status     int              `json:"status"`
+		Message    string           `json:"message"`
 	} `json:"albums"`
 	Artists []interface{} `json:"artists"`
 	Tracks  []interface{} `json:"tracks"`
@@ -103,7 +81,7 @@ func GetAuthorization() (string, error) {
 	return auth.AccessToken, nil
 }
 
-func GetTidalURL(album *aggregator.Album, authKey string) error {
+func SearchAlbum(album *album.Album, authKey string) error {
 	// Build the Tidal API request URL
 	baseURL := "https://openapi.tidal.com/search"
 	query := url.Values{}
@@ -143,29 +121,38 @@ func GetTidalURL(album *aggregator.Album, authKey string) error {
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		// TODO: Check if header contains more information about Retry-After
+		// There is:
+		// X-RateLimit-Remaining		Number of tokens currently remaining. Refer to X-RateLimit-Replenish-Rate header for replenishment information. integer
+		// X-RateLimit-Burst-Capacity	Initial number of tokens, and max number of tokens that can be replenished. integer
+		// X-RateLimit-Replenish-Rate	Number of tokens replenished per second. integer
+		// X-RateLimit-Requested-Tokens	Request cost in tokens. integer
 		sleepingTime, err := time.ParseDuration("3s")
 		if err != nil {
 			return err
 		}
 		time.Sleep(sleepingTime)
-		return GetTidalURL(album, authKey)
+		return SearchAlbum(album, authKey)
+	}
+
+	if resp.StatusCode != http.StatusMultiStatus {
+		log.Error().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Bytes("body", body).Msg("Search Tidal")
+		return fmt.Errorf("search Tidal: expected %d, got %d", http.StatusMultiStatus, resp.StatusCode)
 	}
 
 	// Parse the JSON response
-	var response Response
-	err = json.Unmarshal(body, &response)
+	var searchResponse SearchResponse
+	err = json.Unmarshal(body, &searchResponse)
 	if err != nil {
 		log.Error().Int("StatusCode", resp.StatusCode).Str("URL", apiURL).Msg("")
 		return err
 	}
 
 	// Extract the ID from the response and add it to the album
-	if response.Albums == nil || len(response.Albums) == 0 {
-		log.Debug().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Interface("response", response).Msg("Response from Tidal API in getTidalURL")
+	if searchResponse.Albums == nil || len(searchResponse.Albums) == 0 {
+		log.Debug().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Interface("searchResponse", searchResponse).Msg("Response from Tidal API in GetTidalALbum")
 		return errors.New("no album match")
 	}
 
-	id := response.Albums[0].ID
-	album.TidalURL = fmt.Sprintf("https://listen.tidal.com/album/%s", id)
+	album.Tidal = searchResponse.Albums[0].TidalAlbum
 	return nil
 }

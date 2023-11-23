@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"net/smtp"
-	"newmusicrelease/aggregator"
+	"newmusicrelease/album"
 	"newmusicrelease/spotify"
 	"newmusicrelease/tidal"
 	"os"
@@ -26,7 +26,7 @@ func getLatestFridayDate() string {
 	return latestFriday.Format("20060102")
 }
 
-func genreScraper(genre string, albums *[]aggregator.Album) error {
+func genreScraper(genre string, albums *[]album.Album) error {
 	latestFriday := getLatestFridayDate()
 
 	newReleasesURL := fmt.Sprintf("https://everynoise.com/new_releases_by_genre.cgi?region=US&albumsonly=true&style=cards&date=%s&genre=%s", latestFriday, strings.ReplaceAll(genre, " ", "+"))
@@ -47,7 +47,7 @@ func genreScraper(genre string, albums *[]aggregator.Album) error {
 			albumArt := nextHTMLElement.ChildAttr("span.play img.albumart", "src")
 			artistName := nextHTMLElement.ChildText("a > b")
 			albumName := nextHTMLElement.ChildText("a > i")
-			newAlbum := aggregator.Album{
+			newAlbum := album.Album{
 				AlbumArt:   albumArt,
 				ArtistName: artistName,
 				AlbumName:  albumName,
@@ -66,7 +66,7 @@ func genreScraper(genre string, albums *[]aggregator.Album) error {
 	return nil
 }
 
-func emailSender(albums *[]aggregator.Album) error {
+func emailSender(albums *[]album.Album) error {
 	// Sender and recipients' emails
 	from := viper.GetString("email")
 	to := "xavierbussiere+testing@gmail.com"
@@ -122,15 +122,15 @@ func main() {
 	}
 
 	// Spotify Authorization
-	err = spotify.RequestAccessTokenSpotify()
+	err = spotify.GetAccessToken()
 	if err != nil {
 		log.Fatal().Err(err).Msg("Error while making a request for an access token with Spotify")
 	}
 
-	var albums []aggregator.Album
+	var albums []album.Album
 
-	genres := []string{"electro"}
-	//genres := []string{"german indie", "art pop", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
+	//genres := []string{"electro"}
+	genres := []string{"german indie", "art pop", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
 
 	for _, genre := range genres {
 		err = genreScraper(genre, &albums)
@@ -139,21 +139,25 @@ func main() {
 		}
 	}
 
-	albums = aggregator.RemoveCopies(albums)
+	albums = album.RemoveCopies(albums)
 
 	for i := range albums {
-		err = tidal.GetTidalURL(&albums[i], authKey)
+		err = tidal.SearchAlbum(&albums[i], authKey)
 		if err != nil {
-			log.Error().Err(err).Msg("error ecountered while getting the Tidal link")
+			log.Error().Err(err).Msgf("error ecountered while searching %s on Tidal", albums[i].AlbumName)
 		}
-		err = spotify.GetPopularityArtistSpotify(&albums[i])
+		err = spotify.SearchAlbum(&albums[i])
 		if err != nil {
-			log.Error().Err(err).Msg("error ecountered while getting the Spotify's artist popularity")
+			log.Error().Err(err).Msgf("error ecountered while searching %s on Spotify", albums[i].AlbumName)
 		}
+		//err = spotify.GetArtist(&albums[i])
+		//if err != nil {
+		//	log.Error().Err(err).Msgf("error ecountered while getting %s on Spotify", albums[i].ArtistName)
+		//}
 		log.Info().Interface("album", albums[i]).Msg("")
 	}
 
-	albums = aggregator.RankByPopularity(albums)
+	//albums = album.RankByPopularity(albums)
 
 	err = emailSender(&albums)
 	if err != nil {

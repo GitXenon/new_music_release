@@ -101,19 +101,28 @@
         border-radius: 4px;
     }
 
-    .album h2 {
-        margin-top: 10px;
-        font-size: 1em;
-        color: var(--accent-color);
-    }
-
-    .album h3 {
-        margin: 5px 0;
-        font-size: 1em;
-    }
-
     .album p.genre {
         color: var(--text-color-muted);
+    }
+
+    .streaming-platform {
+        display: flex;
+        justify-content: left; /* Align icons to the right */
+        align-items: center;
+    }
+
+    .streaming-platform a {
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        width: 100%;
+        height: 100%;
+    }
+
+    .streaming-platform img {
+        height: 1.5em; /* Set the desired height for the icons */
+        margin-right: 1em; /* Adjust the margin between the icon and text if needed */
+        margin-bottom: 10px;
     }
     </style>
 </head>
@@ -129,10 +138,21 @@
         {{range .}}
         <div class="album">
             <img src="{{.AlbumArt}}" alt="{{.AlbumName}} Cover">
-            <h2><a href="{{.TidalURL}}" target="_blank">{{.AlbumName}}</a></h2>
+            <div class="album-name">{{.AlbumName}}</div>
+            <div class="streaming-platform">
+                <div class="spotify">
+                    <a href="{{.GetTidalURL}}" target="_blank">
+                        <img src="https://tidal.com/apple-touch-icon.png" alt="tidal logo">
+                    </a>
+                </div>
+                <div class="tidal">
+                    <a href="{{.GetSpotifyURL}}" target="_blank">
+                        <img src="https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png" alt="spotify logo">
+                    </a>
+                </div>
+            </div>
             <div class="artist-info">
                <div class="artist-name">{{.ArtistName}}</div>
-               <div class="popularity {{if (ge .ArtistPopularity 80)}}hot{{end}}">{{.ArtistPopularity}}</div>
             </div>
             <p class="genre">Genre: {{.Genre}}</p>
         </div>
