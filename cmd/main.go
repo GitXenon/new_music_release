@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/smtp"
 	"newmusicrelease/album"
+	"newmusicrelease/deezer"
 	"newmusicrelease/spotify"
 	"newmusicrelease/tidal"
 	"os"
@@ -110,6 +111,7 @@ func emailSender(albums *[]album.Album) error {
 	e.HTML = body.Bytes()
 	e.AttachFile("logo/spotify/spotify-icon.png")
 	e.AttachFile("logo/tidal/tidal-icon.png")
+	e.AttachFile("logo/deezer/deezer-icon.png")
 
 	e.Send(fmt.Sprintf("%s:%d", smtpHost, smtpPort), smtp.PlainAuth("", from, password, smtpHost))
 
@@ -168,6 +170,10 @@ func main() {
 		err = spotify.SearchAlbum(&albums[i])
 		if err != nil {
 			log.Error().Err(err).Msgf("error encountered while searching the album '%s' on Spotify", albums[i].AlbumName)
+		}
+		err = deezer.SearchAlbum(&albums[i])
+		if err != nil {
+			log.Error().Err(err).Msgf("error encountered while searching the album '%s' on Deezer", albums[i].AlbumName)
 		}
 		err = spotify.GetArtists(&albums[i])
 		if err != nil {

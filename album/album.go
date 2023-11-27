@@ -83,6 +83,38 @@ type TidalAlbum struct {
 	Properties      interface{}   `json:"properties"`
 }
 
+type DeezerAlbum struct {
+	ID             int          `json:"id"`
+	Title          string       `json:"title"`
+	Link           string       `json:"link"`
+	Cover          string       `json:"cover"`
+	CoverSmall     string       `json:"cover_small"`
+	CoverMedium    string       `json:"cover_medium"`
+	CoverBig       string       `json:"cover_big"`
+	CoverXL        string       `json:"cover_xl"`
+	MD5Image       string       `json:"md5_image"`
+	GenreID        int          `json:"genre_id"`
+	NbTracks       int          `json:"nb_tracks"`
+	RecordType     string       `json:"record_type"`
+	Tracklist      string       `json:"tracklist"`
+	ExplicitLyrics bool         `json:"explicit_lyrics"`
+	Artist         DeezerArtist `json:"artist"`
+	Type           string       `json:"type"`
+}
+
+type DeezerArtist struct {
+	ID            int    `json:"id"`
+	Name          string `json:"name"`
+	Link          string `json:"link"`
+	Picture       string `json:"picture"`
+	PictureSmall  string `json:"picture_small"`
+	PictureMedium string `json:"picture_medium"`
+	PictureBig    string `json:"picture_big"`
+	PictureXL     string `json:"picture_xl"`
+	Tracklist     string `json:"tracklist"`
+	Type          string `json:"type"`
+}
+
 type Album struct {
 	AlbumArt   string
 	ArtistName string
@@ -90,6 +122,7 @@ type Album struct {
 	Genre      string
 	Tidal      TidalAlbum
 	Spotify    SpotifyAlbum
+	Deezer     DeezerAlbum
 }
 
 func remove(a []Album, i int) []Album {
@@ -135,4 +168,11 @@ func (album Album) GetSpotifyURL() (string, error) {
 		return "", nil
 	}
 	return album.Spotify.ExternalUrls.Spotify, nil
+}
+
+func (album Album) GetDeezerURL() (string, error) {
+	if album.Deezer.Link == "" {
+		return "", nil
+	}
+	return album.Deezer.Link, nil
 }

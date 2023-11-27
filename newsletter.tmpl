@@ -113,14 +113,21 @@
             {{if .GetTidalURL}}
                 <span class="tidal">
                     <a href="{{.GetTidalURL}}" target="_blank">
-                        <img src="cid:tidal-icon.png" alt="tidal logo">
+                        <img src="cid:tidal-icon.png" alt="Tidal">
                     </a>
                 </span>
             {{end}}
             {{if .GetSpotifyURL}}
                 <span class="spotify">
                     <a href="{{.GetSpotifyURL}}" target="_blank">
-                        <img src="cid:spotify-icon.png" alt="spotify logo">
+                        <img src="cid:spotify-icon.png" alt="Spotify">
+                    </a>
+                </span>
+            {{end}}
+            {{if .GetDeezerURL}}
+                <span class="deezer">
+                    <a href="{{.GetDeezerURL}}" target="_blank">
+                        <img src="cid:deezer-icon.png" alt="Deezer">
                     </a>
                 </span>
             {{end}}
