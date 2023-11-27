@@ -3,6 +3,9 @@ package album
 import (
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 type SpotifyArtist struct {
@@ -33,9 +36,11 @@ type SpotifyAlbum struct {
 	Restrictions         struct {
 		Reason string `json:"reason"`
 	} `json:"restrictions"`
-	Type    string          `json:"type"`
-	Uri     string          `json:"uri"`
-	Artists []SpotifyArtist `json:"artists"`
+	Type       string          `json:"type"`
+	Genres     []string        `json:"genres"`
+	Uri        string          `json:"uri"`
+	Artists    []SpotifyArtist `json:"artists"`
+	Popularity int
 }
 
 type SpotifyAlbums struct {
@@ -93,10 +98,17 @@ func remove(a []Album, i int) []Album {
 }
 
 func RemoveCopies(albums []Album) []Album {
+	for i := 0; i < len(albums); i++ {
+		if albums[i].AlbumName == "" {
+			log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Msg("Removed")
+			albums = remove(albums, i)
+		}
+	}
 	for i := range albums {
 		for j := i + 1; j < len(albums); j++ {
 			if albums[i].AlbumName == albums[j].AlbumName && albums[i].ArtistName == albums[j].ArtistName {
-				albums[i].Genre = albums[i].Genre + ", " + albums[j].Genre
+				log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Strs("Genres", []string{albums[j].Genre, albums[i].Genre}).Msg("Found a duplicate")
+				albums[i].Genre = strings.Join([]string{albums[j].Genre, albums[i].Genre}, ",")
 				albums = remove(albums, j)
 			}
 		}
@@ -106,7 +118,7 @@ func RemoveCopies(albums []Album) []Album {
 
 func RankByPopularity(albums []Album) []Album {
 	sort.Slice(albums, func(i, j int) bool {
-		return albums[j].Spotify.Artists[0].Popularity < albums[i].Spotify.Artists[0].Popularity
+		return albums[j].Spotify.Popularity < albums[i].Spotify.Popularity
 	})
 	return albums
 }

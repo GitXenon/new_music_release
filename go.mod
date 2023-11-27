@@ -5,6 +5,7 @@ go 1.21.4
 require (
 	github.com/PuerkitoBio/goquery v1.5.1
 	github.com/gocolly/colly/v2 v2.1.0
+	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/rs/zerolog v1.31.0
 	github.com/spf13/viper v1.17.0
 )

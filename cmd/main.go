@@ -14,6 +14,7 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gocolly/colly/v2"
+	"github.com/jordan-wright/email"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/viper"
@@ -30,7 +31,7 @@ func genreScraper(genre string, albums *[]album.Album) error {
 	latestFriday := getLatestFridayDate()
 
 	newReleasesURL := fmt.Sprintf("https://everynoise.com/new_releases_by_genre.cgi?region=US&albumsonly=true&style=cards&date=%s&genre=%s", latestFriday, strings.ReplaceAll(genre, " ", "+"))
-	genreSelector := fmt.Sprintf("#%s", strings.ReplaceAll(genre, " ", ""))
+	genreSelector := fmt.Sprintf("div#%s", strings.ReplaceAll(genre, " ", ""))
 
 	c := colly.NewCollector()
 
@@ -53,12 +54,15 @@ func genreScraper(genre string, albums *[]album.Album) error {
 				AlbumName:  albumName,
 				Genre:      genre,
 			}
-			*albums = append(*albums, newAlbum)
+			if albumName != "" {
+				log.Debug().Msgf("Added a new album: %s", albumName)
+				*albums = append(*albums, newAlbum)
+			}
 		})
 	})
 
 	c.OnRequest(func(r *colly.Request) {
-		log.Info().Stringer("URL", r.URL).Msg("Visiting")
+		log.Info().Stringer("url", r.URL).Msg("Visiting")
 	})
 
 	c.Visit(newReleasesURL)
@@ -67,18 +71,9 @@ func genreScraper(genre string, albums *[]album.Album) error {
 }
 
 func emailSender(albums *[]album.Album) error {
-	// Sender and recipients' emails
-	from := viper.GetString("email")
-	to := "xavierbussiere+testing@gmail.com"
-
 	password := viper.GetString("password")
-
 	smtpHost := viper.GetString("smtp_host")
 	smtpPort := viper.GetInt("smtp_port")
-
-	// Message to be sent
-	subject := "Subject: Test for New Music Release\n"
-	mime := "MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n"
 
 	tmpl, err := template.New("newsletter.tmpl").ParseFiles("newsletter.tmpl")
 	if err != nil {
@@ -93,11 +88,31 @@ func emailSender(albums *[]album.Album) error {
 		return err
 	}
 
-	// Set up authentication information
-	auth := smtp.PlainAuth("", from, password, smtpHost)
+	f, err := os.Create("./template.html")
+	if err != nil {
+		return err
+	}
 
-	// Connect to the SMTP server
-	err = smtp.SendMail(fmt.Sprintf("%s:%d", smtpHost, smtpPort), auth, from, []string{to}, []byte(subject+mime+body.String()))
+	tmpl.Execute(f, albums)
+	if err != nil {
+		return err
+	}
+
+	f.Close()
+
+	from := viper.GetString("email")
+	to := "xavierbussiere+testing@gmail.com"
+
+	e := email.NewEmail()
+	e.From = fmt.Sprintf("Parfait Saucier <%s>", from)
+	e.To = []string{to}
+	e.Subject = "[Test] New Music Friday"
+	e.HTML = body.Bytes()
+	e.AttachFile("logo/spotify/spotify-icon.png")
+	e.AttachFile("logo/tidal/tidal-icon.png")
+
+	e.Send(fmt.Sprintf("%s:%d", smtpHost, smtpPort), smtp.PlainAuth("", from, password, smtpHost))
+
 	if err != nil {
 		return err
 	}
@@ -129,8 +144,8 @@ func main() {
 
 	var albums []album.Album
 
-	//genres := []string{"electro"}
-	genres := []string{"german indie", "art pop", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
+	//genres := []string{"german soundtrack"}
+	genres := []string{"german indie", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
 
 	for _, genre := range genres {
 		err = genreScraper(genre, &albums)
@@ -142,25 +157,32 @@ func main() {
 	albums = album.RemoveCopies(albums)
 
 	for i := range albums {
+		log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Msg("")
+	}
+
+	for i := range albums {
 		err = tidal.SearchAlbum(&albums[i], authKey)
 		if err != nil {
-			log.Error().Err(err).Msgf("error ecountered while searching %s on Tidal", albums[i].AlbumName)
+			log.Error().Err(err).Msgf("error encountered while searching the album '%s' on Tidal", albums[i].AlbumName)
 		}
 		err = spotify.SearchAlbum(&albums[i])
 		if err != nil {
-			log.Error().Err(err).Msgf("error ecountered while searching %s on Spotify", albums[i].AlbumName)
+			log.Error().Err(err).Msgf("error encountered while searching the album '%s' on Spotify", albums[i].AlbumName)
 		}
-		//err = spotify.GetArtist(&albums[i])
-		//if err != nil {
-		//	log.Error().Err(err).Msgf("error ecountered while getting %s on Spotify", albums[i].ArtistName)
-		//}
-		log.Info().Interface("album", albums[i]).Msg("")
+		err = spotify.GetArtists(&albums[i])
+		if err != nil {
+			log.Error().Err(err).Msgf("error encountered while getting the artist '%s' info on Spotify", albums[i].ArtistName)
+		}
+	}
+	err = spotify.GetAlbums(&albums)
+	if err != nil {
+		log.Error().Err(err).Msgf("error encountered during spotify.GetAlbums")
 	}
 
-	//albums = album.RankByPopularity(albums)
+	albums = album.RankByPopularity(albums)
 
 	err = emailSender(&albums)
 	if err != nil {
-		log.Error().Err(err).Msg("error ecountered during sending email")
+		log.Error().Err(err).Msg("error encountered during sending email")
 	}
 }

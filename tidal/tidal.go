@@ -68,7 +68,7 @@ func GetAuthorization() (string, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		log.Error().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Bytes("body", body).Msg("Authorization Tidal")
+		log.Error().Int("status_code", resp.StatusCode).Stringer("url", req.URL).Bytes("body", body).Msg("Authorization Tidal")
 		return "", fmt.Errorf("auth Tidal: expected 200, got %d", resp.StatusCode)
 	}
 
@@ -82,6 +82,8 @@ func GetAuthorization() (string, error) {
 }
 
 func SearchAlbum(album *album.Album, authKey string) error {
+	log.Info().Str("platform", "Tidal").Msgf("Searching %s from %s", album.AlbumName, album.ArtistName)
+
 	// Build the Tidal API request URL
 	baseURL := "https://openapi.tidal.com/search"
 	query := url.Values{}
@@ -135,7 +137,7 @@ func SearchAlbum(album *album.Album, authKey string) error {
 	}
 
 	if resp.StatusCode != http.StatusMultiStatus {
-		log.Error().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Bytes("body", body).Msg("Search Tidal")
+		log.Error().Int("status_code", resp.StatusCode).Stringer("url", req.URL).Bytes("body", body).Msg("Search Tidal")
 		return fmt.Errorf("search Tidal: expected %d, got %d", http.StatusMultiStatus, resp.StatusCode)
 	}
 
@@ -143,16 +145,20 @@ func SearchAlbum(album *album.Album, authKey string) error {
 	var searchResponse SearchResponse
 	err = json.Unmarshal(body, &searchResponse)
 	if err != nil {
-		log.Error().Int("StatusCode", resp.StatusCode).Str("URL", apiURL).Msg("")
+		log.Error().Int("status_code", resp.StatusCode).Str("url", apiURL).Msg("")
 		return err
 	}
 
 	// Extract the ID from the response and add it to the album
 	if searchResponse.Albums == nil || len(searchResponse.Albums) == 0 {
-		log.Debug().Int("StatusCode", resp.StatusCode).Stringer("URL", req.URL).Interface("searchResponse", searchResponse).Msg("Response from Tidal API in GetTidalALbum")
 		return errors.New("no album match")
 	}
+	if searchResponse.Albums[0].Status == http.StatusUnavailableForLegalReasons {
+		log.Warn().Int("status_code", searchResponse.Albums[0].Status).Stringer("url", req.URL).Str("album_name", album.AlbumName).Str("artist_name", album.ArtistName).Msg(searchResponse.Albums[0].Message)
+		album.Tidal.ID = searchResponse.Albums[0].ID
+	} else {
+		album.Tidal = searchResponse.Albums[0].TidalAlbum
+	}
 
-	album.Tidal = searchResponse.Albums[0].TidalAlbum
 	return nil
 }

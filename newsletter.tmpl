@@ -5,33 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Album Release Newsletter</title>
     <style>
-    /* Set default colors for light mode */
-    :root {
-        --background-color: white;
-        --foreground-color: #fff;
-        --text-color: #1F2328;
-        --text-color-muted: #656d76;
-        --text-color-subtle: #6e7781;
-        --accent-color: #0969da;
-        --border-color: #d0d7de;
-    }
-
-    /* Dark mode */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --background-color: #0d1117;
-            --foreground-color: #e6edf3;
-            --text-color: #e6edf3;
-            --text-color-muted: #7d8590;
-            --text-color-subtle: #6e7681;
-            --accent-color: #4e9fff;
-            --border-color: #30363d;
-        }
-    }
-
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        color: var(--text-color);
+        color: #1F2328;
     }
 
     .container {
@@ -42,8 +18,30 @@
         margin-bottom: 20px;
     }
 
+   .header p {
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+
     .header h1 {
-        color: var(--text-color);
+        height: 3.5rem;
+        color: #1F2328;
+        font-size: 2.5rem;
+        line-height: 1.4;
+        font-weight: 500;
+    }
+
+    .album-name {
+        font-size: 1.25rem;
+        line-height: 1.6;
+        font-weight: 600;
+    }
+
+    .artist-name {
+        color: #6e7781;
+        font-size: 1.25rem;
+        line-height: 1.6;
+        font-weight: 400;
     }
 
     a {
@@ -60,17 +58,26 @@
         border-radius: 4px;
     }
 
-    .album div.genre {
-        color: var(--text-color-muted);
-    }
-
-    .artist-name {
-        color: var(--text-color-subtle)
+    .album div.genre {        
+        color: #6e7781;
+        font-size: 0.75rem;
+        line-height: 1.66666;
     }
 
     .streaming-platform img {
-        height: 1.5em; /* Set the desired height for the icons */
+        height: 1.5em;
         margin: 0.5em;
+    }
+
+    .popularity {
+        padding: 0px 7px;
+        font-weight: 600;
+        line-height: 1;
+        font-size: 12px;
+        border-color: rgb(208, 215, 222);
+        border-width: 1px;
+        border-radius: 999px;
+        border-style: solid;
     }
     </style>
 </head>
@@ -78,30 +85,42 @@
 
 <div class="container">
     <div class="header">
-        <h1>Music Album Release Newsletter</h1>
-        <p>Discover the latest music releases and stay tuned!</p>
+        <h1>New Music Friday</h1>
+        <p>A weekly recap about the new music album releases.</p>
     </div>
 
     <div class="albums">
         {{range .}}
         <div class="album">
             <img src="{{.AlbumArt}}" alt="{{.AlbumName}} Cover">
-            <div class="album-name">{{.AlbumName}}</div>
-            <div class="artist-info">
-               <div class="artist-name">{{.ArtistName}}</div>
+            <div>
+                <span class="album-name">{{.AlbumName}}</span>
+                <span class="popularity">{{.Spotify.Popularity}}</span>
             </div>
+            {{if not .Spotify.Artists}}
+                <div class="artist-info">
+                    <div class="artist-name">{{.ArtistName}}</div>
+                </div>
+            {{else}}
+                {{range .Spotify.Artists}}
+                    <div class="artist-info">
+                        <span class="artist-name">{{.Name}}</span>
+                        <span class="popularity">{{.Popularity}}</span>
+                    </div>
+                {{end}}
+            {{end}}
             <div class="streaming-platform">
             {{if .GetTidalURL}}
-                <span class="spotify">
+                <span class="tidal">
                     <a href="{{.GetTidalURL}}" target="_blank">
-                        <img src="https://tidal.com/apple-touch-icon.png" alt="tidal logo">
+                        <img src="cid:tidal-icon.png" alt="tidal logo">
                     </a>
                 </span>
             {{end}}
             {{if .GetSpotifyURL}}
-                <span class="tidal">
+                <span class="spotify">
                     <a href="{{.GetSpotifyURL}}" target="_blank">
-                        <img src="https://open.spotifycdn.com/cdn/images/favicon32.b64ecc03.png" alt="spotify logo">
+                        <img src="cid:spotify-icon.png" alt="spotify logo">
                     </a>
                 </span>
             {{end}}
@@ -111,12 +130,5 @@
         {{end}}
     </div>
 </div>
-<script>
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
-</script>
 </body>
 </html>
