@@ -141,7 +141,7 @@ func RemoveCopies(albums []Album) []Album {
 		for j := i + 1; j < len(albums); j++ {
 			if albums[i].AlbumName == albums[j].AlbumName && albums[i].ArtistName == albums[j].ArtistName {
 				log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Strs("Genres", []string{albums[j].Genre, albums[i].Genre}).Msg("Found a duplicate")
-				albums[i].Genre = strings.Join([]string{albums[j].Genre, albums[i].Genre}, ",")
+				albums[i].Genre = strings.Join([]string{albums[j].Genre, albums[i].Genre}, ", ")
 				albums = remove(albums, j)
 			}
 		}
