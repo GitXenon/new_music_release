@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"newmusicrelease/album"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,20 +26,30 @@ type Authorization struct {
 }
 
 type Artists struct {
-	Href     string           `json:"href"`
-	Limit    int              `json:"limit"`
-	Next     string           `json:"next"`
-	Offset   int              `json:"offset"`
-	Previous string           `json:"previous"`
-	Total    int              `json:"total"`
-	Items    []ArtistResponse `json:"items"`
+	Href     string         `json:"href"`
+	Limit    int            `json:"limit"`
+	Next     string         `json:"next"`
+	Offset   int            `json:"offset"`
+	Previous string         `json:"previous"`
+	Total    int            `json:"total"`
+	Items    []ArtistObject `json:"items"`
+}
+
+type TopArtists struct {
+	Href     string         `json:"href"`
+	Limit    int            `json:"limit"`
+	Next     string         `json:"next"`
+	Offset   int            `json:"offset"`
+	Previous string         `json:"previous"`
+	Total    int            `json:"total"`
+	Items    []ArtistObject `json:"items"`
 }
 
 type ArtistResponses struct {
-	Artists []ArtistResponse `json:"artists"`
+	Artists []ArtistObject `json:"artists"`
 }
 
-type ArtistResponse struct {
+type ArtistObject struct {
 	ExternalUrls ExternalURLs `json:"external_urls"`
 	Followers    struct {
 		Href  string `json:"href"`
@@ -64,6 +75,16 @@ type ExternalURLs struct {
 	Spotify string `json:"spotify"`
 }
 
+type TopTracks struct {
+	Href     string  `json:"href"`
+	Limit    int     `json:"limit"`
+	Next     string  `json:"next"`
+	Offset   int     `json:"offset"`
+	Previous string  `json:"previous"`
+	Total    int     `json:"total"`
+	Items    []Track `json:"items"`
+}
+
 type Tracks struct {
 	Href     string  `json:"href"`
 	Limit    int     `json:"limit"`
@@ -79,15 +100,15 @@ type Restrictions struct {
 }
 
 type Track struct {
-	Artists          []struct{}   `json:"artists"`
-	AvailableMarkets []string     `json:"available_markets"`
-	DiscNumber       int          `json:"disc_number"`
-	DurationMS       int          `json:"duration_ms"`
-	Explicit         bool         `json:"explicit"`
-	ExternalURLs     ExternalURLs `json:"external_urls"`
-	Href             string       `json:"href"`
-	ID               string       `json:"id"`
-	IsPlayable       bool         `json:"is_playable"`
+	Artists          []ArtistObject `json:"artists"`
+	AvailableMarkets []string       `json:"available_markets"`
+	DiscNumber       int            `json:"disc_number"`
+	DurationMS       int            `json:"duration_ms"`
+	Explicit         bool           `json:"explicit"`
+	ExternalURLs     ExternalURLs   `json:"external_urls"`
+	Href             string         `json:"href"`
+	ID               string         `json:"id"`
+	IsPlayable       bool           `json:"is_playable"`
 	LinkedFrom       struct {
 		ExternalURLs ExternalURLs `json:"external_urls"`
 		Href         string       `json:"href"`
@@ -523,10 +544,9 @@ func GetAlbums(albums *[]album.Album) error {
 		for i := 0; i < len(albumsResponses.Albums); i++ {
 			for j := 0; j < len(subsetAlbums); j++ {
 				if albumsResponses.Albums[i].ID == subsetAlbums[j].Spotify.Id {
-					genres := strings.Join(albumsResponses.Albums[i].Genres, ",")
 					log.Debug().Str("album_id", subsetAlbums[j].Spotify.Id).Msgf("Popularity for %s: %d", subsetAlbums[j].AlbumName, albumsResponses.Albums[i].Popularity)
-					if genres != "" {
-						subsetAlbums[j].Genre = genres
+					if albumsResponses.Albums[i].Genres != nil {
+						subsetAlbums[j].Genres = append(subsetAlbums[j].Genres, albumsResponses.Albums[i].Genres...)
 					}
 					subsetAlbums[j].Spotify.Popularity = albumsResponses.Albums[i].Popularity
 				}
@@ -534,4 +554,194 @@ func GetAlbums(albums *[]album.Album) error {
 		}
 	}
 	return nil
+}
+
+func GetTopArtists() (map[string]int, error) {
+	accessToken := viper.GetString("spotify.access_token")
+
+	log.Info().Str("platform", "Spotify").Msg("Getting top artists from user")
+
+	baseURL := "https://api.spotify.com/v1/me/top/artists"
+
+	log.Debug().Str("base_url", baseURL).Msg("")
+
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the necessary headers
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("limit", "50")
+
+	// Perform the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		sleepingTime, err := time.ParseDuration("3s")
+		if err != nil {
+			return nil, err
+		}
+		time.Sleep(sleepingTime)
+		return GetTopArtists()
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		err = GetRefreshToken()
+		if err != nil {
+			return nil, err
+		}
+		return GetTopArtists()
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Error().Int("status_code", resp.StatusCode).Stringer("url", req.URL).Bytes("body", body).Msg("")
+		return nil, fmt.Errorf("spotify: expected %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	// Parse the JSON response
+	var topArtists TopArtists
+	err = json.Unmarshal(body, &topArtists)
+	if err != nil {
+		log.Error().Int("status_code", resp.StatusCode).Str("url", baseURL).Msg("")
+		return nil, err
+	}
+
+	var genres []string
+
+	for i := 0; i < len(topArtists.Items); i++ {
+		genres = append(genres, topArtists.Items[i].Genres...)
+	}
+
+	genresCount := make(map[string]int)
+
+	for _, genre := range genres {
+		genresCount[genre]++
+	}
+
+	keys := make([]string, 0, len(genresCount))
+
+	for key := range genresCount {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return genresCount[keys[i]] > genresCount[keys[j]]
+	})
+
+	for _, key := range keys {
+		log.Debug().Msgf("%s %d", key, genresCount[key])
+	}
+
+	return genresCount, nil
+}
+
+func GetTopTracks() (map[string]int, error) {
+	accessToken := viper.GetString("spotify.access_token")
+
+	log.Info().Str("platform", "Spotify").Msg("Getting top tracks from user")
+
+	baseURL := "https://api.spotify.com/v1/me/top/tracks"
+
+	log.Debug().Str("base_url", baseURL).Msg("")
+
+	req, err := http.NewRequest("GET", baseURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set the necessary headers
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
+	req.Header.Set("limit", "50")
+
+	// Perform the HTTP request
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode == http.StatusTooManyRequests {
+		sleepingTime, err := time.ParseDuration("3s")
+		if err != nil {
+			return nil, err
+		}
+		time.Sleep(sleepingTime)
+		return GetTopTracks()
+	}
+
+	if resp.StatusCode == http.StatusUnauthorized {
+		err = GetRefreshToken()
+		if err != nil {
+			return nil, err
+		}
+		return GetTopTracks()
+	}
+	if resp.StatusCode != http.StatusOK {
+		log.Error().Int("status_code", resp.StatusCode).Stringer("url", req.URL).Bytes("body", body).Msg("")
+		return nil, fmt.Errorf("spotify: expected %d, got %d", http.StatusOK, resp.StatusCode)
+	}
+
+	log.Debug().Bytes("body", body).Msg("")
+
+	// Parse the JSON response
+	var topTracks TopTracks
+	err = json.Unmarshal(body, &topTracks)
+	if err != nil {
+		log.Error().Int("status_code", resp.StatusCode).Str("url", baseURL).Msg("")
+		return nil, err
+	}
+
+	var genres []string
+
+	for i := 0; i < len(topTracks.Items); i++ {
+		if i == 0 {
+			log.Debug().Interface("track", topTracks.Items[0]).Msg("")
+			log.Debug().Msgf("artist of track #1 %s", topTracks.Items[i].Artists[0].Name)
+		}
+		for j := 0; j < len(topTracks.Items[i].Artists); j++ {
+			genres = append(genres, topTracks.Items[i].Artists[j].Genres...)
+		}
+	}
+
+	log.Debug().Int("len(genres)", len(genres)).Msg("")
+
+	genresCount := make(map[string]int)
+
+	for _, genre := range genres {
+		genresCount[genre]++
+	}
+
+	keys := make([]string, 0, len(genresCount))
+
+	for key := range genresCount {
+		keys = append(keys, key)
+	}
+
+	sort.Slice(keys, func(i, j int) bool {
+		return genresCount[keys[i]] > genresCount[keys[j]]
+	})
+
+	for _, key := range keys {
+		log.Debug().Msgf("%s %d", key, genresCount[key])
+	}
+
+	return genresCount, nil
 }

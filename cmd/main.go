@@ -37,6 +37,7 @@ func genreScraper(genre string, albums *[]album.Album) error {
 	c := colly.NewCollector()
 
 	c.OnHTML(genreSelector, func(e *colly.HTMLElement) {
+		log.Debug().Msgf("colly is doing it's job on '%s'", genreSelector)
 		nextSibling := e.DOM.Next()
 
 		nextSibling.Children().Each(func(i int, s *goquery.Selection) {
@@ -53,7 +54,7 @@ func genreScraper(genre string, albums *[]album.Album) error {
 				AlbumArt:   albumArt,
 				ArtistName: artistName,
 				AlbumName:  albumName,
-				Genre:      genre,
+				Genres:     []string{genre},
 			}
 			if albumName != "" {
 				log.Debug().Msgf("Added a new album: %s", albumName)
@@ -146,8 +147,22 @@ func main() {
 
 	var albums []album.Album
 
-	//genres := []string{"german soundtrack"}
-	genres := []string{"german indie", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
+	// TODO: Get a user's listening data to know which genre to fetch
+	genresCount, err := spotify.GetTopArtists()
+	if err != nil {
+		log.Error().Err(err).Msg("error encountered while getting top albums on Spotify")
+	}
+
+	genres := make([]string, len(genresCount))
+
+	i := 0
+	for genre := range genresCount {
+		genres[i] = genre
+		i++
+	}
+
+	//genres = []string{"nordic soundtrack"}
+	//genres := []string{"german indie", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
 
 	for _, genre := range genres {
 		err = genreScraper(genre, &albums)

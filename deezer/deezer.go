@@ -74,7 +74,7 @@ func SearchAlbum(album *album.Album) error {
 		return errors.New("no album match")
 	}
 
-	// TODO:	Make sure the first album is a match
+	// TODO:	Make sure the first album is a match, sometimes it returns only a Single.
 
 	album.Deezer = searchResponse.Data[0]
 	return nil

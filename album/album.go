@@ -3,7 +3,6 @@ package album
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/rs/zerolog/log"
 )
@@ -119,7 +118,7 @@ type Album struct {
 	AlbumArt   string
 	ArtistName string
 	AlbumName  string
-	Genre      string
+	Genres     []string
 	Tidal      TidalAlbum
 	Spotify    SpotifyAlbum
 	Deezer     DeezerAlbum
@@ -140,8 +139,8 @@ func RemoveCopies(albums []Album) []Album {
 	for i := range albums {
 		for j := i + 1; j < len(albums); j++ {
 			if albums[i].AlbumName == albums[j].AlbumName && albums[i].ArtistName == albums[j].ArtistName {
-				log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Strs("Genres", []string{albums[j].Genre, albums[i].Genre}).Msg("Found a duplicate")
-				albums[i].Genre = strings.Join([]string{albums[j].Genre, albums[i].Genre}, ", ")
+				log.Debug().Str("album_name", albums[i].AlbumName).Str("artist_name", albums[i].ArtistName).Strs("Genres", append(albums[i].Genres, albums[j].Genres...)).Msg("Found a duplicate")
+				albums[i].Genres = append(albums[i].Genres, albums[j].Genres...)
 				albums = remove(albums, j)
 			}
 		}
