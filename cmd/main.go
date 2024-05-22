@@ -110,9 +110,9 @@ func emailSender(albums *[]album.Album) error {
 	e.To = []string{to}
 	e.Subject = "[Test] New Music Friday"
 	e.HTML = body.Bytes()
-	e.AttachFile("logo/spotify/spotify-icon.png")
-	e.AttachFile("logo/tidal/tidal-icon.png")
-	e.AttachFile("logo/deezer/deezer-icon.png")
+	e.AttachFile("logo/spotify/spotify-icon-64.png")
+	e.AttachFile("logo/tidal/tidal-icon-64.png")
+	e.AttachFile("logo/deezer/deezer-icon-64.png")
 
 	e.Send(fmt.Sprintf("%s:%d", smtpHost, smtpPort), smtp.PlainAuth("", from, password, smtpHost))
 
@@ -161,7 +161,7 @@ func main() {
 		i++
 	}
 
-	//genres = []string{"nordic soundtrack"}
+	genres = []string{"hip hop", "rap"}
 	//genres := []string{"german indie", "phonk", "wonky", "rap", "indietronica", "rock", "new wave", "electro", "art pop", "hip hop", "indie soul"}
 
 	for _, genre := range genres {

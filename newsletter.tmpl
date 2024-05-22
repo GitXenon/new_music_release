@@ -113,26 +113,26 @@
             {{if .GetTidalURL}}
                 <span class="tidal">
                     <a href="{{.GetTidalURL}}" target="_blank">
-                        <img src="cid:tidal-icon.png" alt="Tidal">
+                        <img src="cid:tidal-icon-64.png" alt="Tidal">
                     </a>
                 </span>
             {{end}}
             {{if .GetSpotifyURL}}
                 <span class="spotify">
                     <a href="{{.GetSpotifyURL}}" target="_blank">
-                        <img src="cid:spotify-icon.png" alt="Spotify">
+                        <img src="cid:spotify-icon-64.png" alt="Spotify">
                     </a>
                 </span>
             {{end}}
             {{if .GetDeezerURL}}
                 <span class="deezer">
                     <a href="{{.GetDeezerURL}}" target="_blank">
-                        <img src="cid:deezer-icon.png" alt="Deezer">
+                        <img src="cid:deezer-icon-64.png" alt="Deezer">
                     </a>
                 </span>
             {{end}}
             </div>
-            <div class="genre">Genres: {{range .Genres}}{{.}}{{end}}</div>
+            <div class="genre">Genres: {{range $i, $v := .Genres}}{{if $i}}, {{end}}{{$v}}{{end}}</div>
         </div>
         {{end}}
     </div>
